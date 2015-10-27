@@ -8,6 +8,7 @@ import (
 )
 
 var wg sync.WaitGroup
+var wga sync.WaitGroup
 
 type person struct {
 	Name    string
@@ -15,48 +16,63 @@ type person struct {
 }
 
 var people []person
+var mtx = &sync.Mutex{}
+var alarmset bool
 
 func main() {
+	fmt.Println("Let's go for walk!")
 	Bob := person{"Bob", false}
 	Alice := person{"Alice", false}
 	people = []person{Bob, Alice}
 
 	wg.Add(2)
-	go Bob.dotask("getting ready", 10, 20, false)
-	go Alice.dotask("getting ready", 10, 20, false)
+	go people[0].dotask("getting ready", 10, 20, false)
+	go people[1].dotask("getting ready", 10, 20, false)
 	wg.Wait()
 
-	wg.Add(1)
+	wga.Add(1)
 	go setAlarm(60)
 
 	wg.Add(2)
-	go Bob.dotask("putting on shoes", 10, 20, true)
-	go Alice.dotask("putting on shoes", 10, 20, true)
-	fmt.Println("Exiting and locking door.")
+	go people[0].dotask("putting on shoes", 10, 20, true)
+	go people[1].dotask("putting on shoes", 10, 20, true)
 	wg.Wait()
+	if alarmset {
+		fmt.Println("Crap!  The alarm is already set.")
+	} else {
+		fmt.Println("Exiting and locking door.")
+	}
+	wga.Wait()
 }
 
 func setAlarm(delay int) {
 	fmt.Println("Arming alarm.")
 	fmt.Println("Alarm is counting down.")
 	time.Sleep(time.Duration(delay) * time.Second)
+	alarmset = true
 	fmt.Println("Alarm armed.")
+	mtx.Lock()
 	for _, v := range people {
-		if !v.AllDone {
-			panic(fmt.Sprintf("Alarm set before %v was ready.", v.Name))
+		if v.AllDone == false {
+			fmt.Printf("Alarm set before %v was ready.\n", v.Name)
 		}
 	}
-	defer wg.Done()
+	defer func() {
+		mtx.Unlock()
+		wga.Done()
+	}()
 }
 
-func (p person) dotask(task string, min int, max int, setdone bool) {
+func (p *person) dotask(task string, min int, max int, setdone bool) {
 	defer wg.Done()
 	s := random(min, max)
 	fmt.Println(p.Name, "started", task)
 	time.Sleep(time.Duration(s) * time.Second)
 	fmt.Println(p.Name, "spent", s, "seconds", task)
 	if setdone {
+		mtx.Lock()
 		p.AllDone = true
+		mtx.Unlock()
 	}
 }
 
