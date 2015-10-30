@@ -48,6 +48,7 @@ func main() {
 		wg.Add(1)
 		go hsld[k].dotask("getting ready", 1, 3, false)
 	}
+
 	wg.Wait()
 
 	wga.Add(1)
