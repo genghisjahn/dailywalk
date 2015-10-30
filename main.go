@@ -28,9 +28,7 @@ type person struct {
 
 var people []person
 var mtx = &sync.Mutex{}
-var mtxa = &sync.Mutex{}
 
-//var alarmset bool
 var alrm = alarm{false, &sync.Mutex{}}
 
 func main() {
