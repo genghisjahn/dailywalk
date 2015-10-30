@@ -16,9 +16,9 @@ type alarm struct {
 }
 
 func (a *alarm) Set(value bool) {
+	defer a.Unlock()
 	a.Lock()
 	a.bool = value
-	a.Unlock()
 }
 
 type person struct {
@@ -70,6 +70,7 @@ func main() {
 }
 
 func setAlarm(delay int) {
+	defer wga.Done()
 	fmt.Println("Arming alarm.")
 	fmt.Println("Alarm is counting down.")
 	time.Sleep(time.Duration(delay) * time.Second)
@@ -82,9 +83,6 @@ func setAlarm(delay int) {
 		}
 		v.Unlock()
 	}
-	defer func() {
-		wga.Done()
-	}()
 }
 
 func (p *person) dotask(task string, min int, max int, setdone bool) {
