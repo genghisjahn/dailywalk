@@ -17,6 +17,7 @@ type person struct {
 
 var people []person
 var mtx = &sync.Mutex{}
+var mtxa = &sync.Mutex{}
 var alarmset bool
 
 func main() {
@@ -25,25 +26,27 @@ func main() {
 	Alice := person{"Alice", false}
 	people = []person{Bob, Alice}
 
-	for _, v := range people {
+	for k := range people {
 		wg.Add(1)
-		go v.dotask("getting ready", 10, 20, false)
+		go people[k].dotask("getting ready", 1, 3, false)
 	}
 	wg.Wait()
 
 	wga.Add(1)
-	go setAlarm(60)
+	go setAlarm(5)
 
-	for _, v := range people {
+	for k := range people {
 		wg.Add(1)
-		go v.dotask("putting on shoes", 10, 20, true)
+		go people[k].dotask("putting on shoes", 1, 3, true)
 	}
 	wg.Wait()
+	mtxa.Lock()
 	if alarmset {
 		fmt.Println("Crap!  The alarm is already set.")
 	} else {
 		fmt.Println("Exiting and locking door.")
 	}
+	mtxa.Unlock()
 	wga.Wait()
 }
 
@@ -51,7 +54,9 @@ func setAlarm(delay int) {
 	fmt.Println("Arming alarm.")
 	fmt.Println("Alarm is counting down.")
 	time.Sleep(time.Duration(delay) * time.Second)
+	mtxa.Lock()
 	alarmset = true
+	mtxa.Unlock()
 	fmt.Println("Alarm armed.")
 	mtx.Lock()
 	for _, v := range people {
