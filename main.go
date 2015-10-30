@@ -24,33 +24,43 @@ func (a *alarm) Set(value bool) {
 type person struct {
 	Name    string
 	AllDone bool
+	*sync.Mutex
 }
 
-var people []person
-var mtx = &sync.Mutex{}
-var mtxa = &sync.Mutex{}
+func (p *person) setAllDone(value bool) {
+	defer p.Unlock()
+	p.Lock()
+	p.AllDone = value
+}
 
-//var alarmset bool
+type people []person
+
+type household struct {
+	people
+	*sync.Mutex
+}
+
 var alrm = alarm{false, &sync.Mutex{}}
+var hsld = household{[]person{}, &sync.Mutex{}}
 
 func main() {
 	fmt.Println("Let's go for walk!")
-	Bob := person{"Bob", false}
-	Alice := person{"Alice", false}
-	people = []person{Bob, Alice}
+	Bob := person{"Bob", false, &sync.Mutex{}}
+	Alice := person{"Alice", false, &sync.Mutex{}}
+	hsld.people = []person{Bob, Alice}
 
-	for k := range people {
+	for k := range hsld.people {
 		wg.Add(1)
-		go people[k].dotask("getting ready", 1, 3, false)
+		go hsld.people[k].dotask("getting ready", 1, 3, false)
 	}
 	wg.Wait()
 
 	wga.Add(1)
 	go setAlarm(5)
 
-	for k := range people {
+	for k := range hsld.people {
 		wg.Add(1)
-		go people[k].dotask("putting on shoes", 1, 3, true)
+		go hsld.people[k].dotask("putting on shoes", 1, 3, true)
 	}
 	wg.Wait()
 	alrm.Lock()
@@ -69,14 +79,14 @@ func setAlarm(delay int) {
 	time.Sleep(time.Duration(delay) * time.Second)
 	alrm.Set(true)
 	fmt.Println("Alarm armed.")
-	mtx.Lock()
-	for _, v := range people {
+	for _, v := range hsld.people {
+		v.Lock()
 		if v.AllDone == false {
 			fmt.Printf("Alarm set before %v was ready.\n", v.Name)
 		}
+		v.Unlock()
 	}
 	defer func() {
-		mtx.Unlock()
 		wga.Done()
 	}()
 }
@@ -88,9 +98,7 @@ func (p *person) dotask(task string, min int, max int, setdone bool) {
 	time.Sleep(time.Duration(s) * time.Second)
 	fmt.Println(p.Name, "spent", s, "seconds", task)
 	if setdone {
-		mtx.Lock()
-		p.AllDone = true
-		mtx.Unlock()
+		p.setAllDone(true)
 	}
 }
 
