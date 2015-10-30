@@ -10,6 +10,17 @@ import (
 var wg sync.WaitGroup
 var wga sync.WaitGroup
 
+type alarm struct {
+	bool
+	*sync.Mutex
+}
+
+func (a *alarm) Set(value bool) {
+	a.Lock()
+	a.bool = value
+	a.Unlock()
+}
+
 type person struct {
 	Name    string
 	AllDone bool
@@ -18,7 +29,9 @@ type person struct {
 var people []person
 var mtx = &sync.Mutex{}
 var mtxa = &sync.Mutex{}
-var alarmset bool
+
+//var alarmset bool
+var alrm = alarm{false, &sync.Mutex{}}
 
 func main() {
 	fmt.Println("Let's go for walk!")
@@ -40,13 +53,13 @@ func main() {
 		go people[k].dotask("putting on shoes", 1, 3, true)
 	}
 	wg.Wait()
-	mtxa.Lock()
-	if alarmset {
+	alrm.Lock()
+	if alrm.bool {
 		fmt.Println("Crap!  The alarm is already set.")
 	} else {
 		fmt.Println("Exiting and locking door.")
 	}
-	mtxa.Unlock()
+	alrm.Unlock()
 	wga.Wait()
 }
 
@@ -54,9 +67,7 @@ func setAlarm(delay int) {
 	fmt.Println("Arming alarm.")
 	fmt.Println("Alarm is counting down.")
 	time.Sleep(time.Duration(delay) * time.Second)
-	mtxa.Lock()
-	alarmset = true
-	mtxa.Unlock()
+	alrm.Set(true)
 	fmt.Println("Alarm armed.")
 	mtx.Lock()
 	for _, v := range people {
