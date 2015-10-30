@@ -25,17 +25,19 @@ func main() {
 	Alice := person{"Alice", false}
 	people = []person{Bob, Alice}
 
-	wg.Add(2)
-	go people[0].dotask("getting ready", 10, 20, false)
-	go people[1].dotask("getting ready", 10, 20, false)
+	for _, v := range people {
+		wg.Add(1)
+		go v.dotask("getting ready", 10, 20, false)
+	}
 	wg.Wait()
 
 	wga.Add(1)
 	go setAlarm(60)
 
-	wg.Add(2)
-	go people[0].dotask("putting on shoes", 10, 20, true)
-	go people[1].dotask("putting on shoes", 10, 20, true)
+	for _, v := range people {
+		wg.Add(1)
+		go v.dotask("putting on shoes", 10, 20, true)
+	}
 	wg.Wait()
 	if alarmset {
 		fmt.Println("Crap!  The alarm is already set.")
